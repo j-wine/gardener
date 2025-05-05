@@ -1,0 +1,75 @@
+image: "thlmylab/swakkd:stable"
+
+stages:
+    - prepare
+    - build
+    - deploy
+    - terminate
+
+prepare:
+    stage: prepare
+    script:
+        - kubectl delete secret gitlab-registry-credentials || true
+        - "kubectl create secret docker-registry gitlab-registry-credentials \
+                    --docker-server=$CI_REGISTRY \
+                    --docker-username=image-registry \ 
+                    --docker-password=$CI_REGISTRY_TOKEN"
+
+claim-volume:
+    stage: prepare
+    script:
+        - kubectl apply -f deploy/storage
+
+build-backend:
+    stage: build
+    image: docker:stable
+    services: ["docker:dind"]
+    script:
+        - cd backend
+        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+        - docker build -t $CI_REGISTRY_IMAGE/backend:latest .
+        - docker push $CI_REGISTRY_IMAGE/backend:latest
+
+deploy-backend:
+    stage: deploy
+    script:
+        - mo deploy/backend/backend-service.yaml | kubectl apply -f -
+        - mo deploy/backend/backend-deployment.yaml | kubectl delete -f - || true
+        - mo deploy/backend/backend-deployment.yaml | kubectl apply -f -
+
+build-frontend:
+    stage: build
+    image: docker:stable
+    services: ["docker:dind"]
+    script:
+        - cd frontend
+        - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+        - docker build -t $CI_REGISTRY_IMAGE/frontend:latest .
+        - docker push $CI_REGISTRY_IMAGE/frontend:latest
+
+deploy-frontend:
+    stage: deploy
+    script:
+        - mo deploy/ingress/combined-ingress.yaml | kubectl apply -f - # Combined ingress for frontend and backend
+        - mo deploy/frontend/frontend-service.yaml | kubectl apply -f -
+        - mo deploy/frontend/frontend-deployment.yaml | kubectl delete -f - || true
+        - mo deploy/frontend/frontend-deployment.yaml | kubectl apply -f -
+
+
+
+deploy-persistent-postgres:
+    stage: deploy
+    script:
+        - mo deploy/persistent-postgres/postgres.yaml | kubectl apply -f -
+
+terminate:
+    stage: terminate
+    when: manual
+    script:
+        - kubectl delete -f deploy/persistent-postgres || true
+        - mo deploy/ingress/combined-ingress.yaml | kubectl delete -f - || true
+        - mo deploy/frontend/frontend-service.yaml | kubectl delete -f - || true
+        - mo deploy/frontend/frontend-deployment.yaml | kubectl delete -f - || true
+        - mo deploy/backend/backend-service.yaml | kubectl delete -f - || true
+        - mo deploy/backend/backend-deployment.yaml | kubectl delete -f - || true
+        - kubectl delete -f deploy/storage || true

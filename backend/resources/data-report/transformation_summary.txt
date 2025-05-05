@@ -1,0 +1,11 @@
+
+Data Transformation Summary:
+1. Removed 1 rows where 'TOPMN' > 40 degrees.
+2. Replaced NA values in 'KTMP' with 'TMIN - 5 degrees' for 1410 rows.
+3. Set latitude values outside the range -90 to 90 degrees to NA for 2 rows in 'LATOPMN'.
+3. Set latitude values outside the range -90 to 90 degrees to NA for 3 rows in 'LATOPMX'.
+3. Set latitude values outside the range -90 to 90 degrees to NA for 5 rows in 'LATMN'.
+3. Set latitude values outside the range -90 to 90 degrees to NA for 7 rows in 'LATMX'.
+4. Set 'GMAX' to 0 for 2 rows where it was missing or empty.
+5. Removed 505 rows with NA values in the following fields: TOPMN, TOPMX, TMIN, TMAX, ROPMN, ROPMX, RMIN, RMAX, GMIN, GMAX, KTMP.
+Resulting dataset contains 2062 rows and 55 columns.

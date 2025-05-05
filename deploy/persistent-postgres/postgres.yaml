@@ -1,0 +1,55 @@
+# deploy/persistent-postgres/postgres.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgresql
+        image: postgres:16-alpine
+        ports:
+        - containerPort: 5432
+        env:
+          - name: POSTGRES_DB
+            value: {{ DB_DATABASE }}
+          - name: POSTGRES_USER
+            value: {{ DB_USER }}
+          - name: POSTGRES_PASSWORD
+            value: {{ DB_PASSWORD }}
+        volumeMounts:
+        - mountPath: "/data"
+          name: postgres-volume
+        resources:
+          requests:
+            cpu: 25m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+      volumes:
+      - name: postgres-volume
+        persistentVolumeClaim:
+          claimName: postgres-volume-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432

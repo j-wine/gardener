@@ -1,0 +1,43 @@
+# backend-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      imagePullSecrets:
+      - name: gitlab-registry-credentials
+      containers:
+      - name: backend
+        image: "{{ CI_REGISTRY_IMAGE }}/backend:latest"
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DB_HOST
+          value: "postgres-service"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: {{ DB_USER }}
+        - name: DB_PASSWORD
+          value: {{ DB_PASSWORD }}
+        - name: DB_DATABASE
+          value: {{ DB_DATABASE }}
+
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
