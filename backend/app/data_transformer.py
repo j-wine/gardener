@@ -30,7 +30,7 @@ CATEGORICAL_WITH_NOTES = [
     "PHOTO", "TEXT", "DRA", "SALR", "FER", "TOX", "DEPR"
 ]
 
-RESOURCES_PATH = "resources"
+RESOURCES_PATH = "../resources"
 REPORT_PATH = os.path.join(RESOURCES_PATH, "data-report")
 INPUT_FILE = os.path.join(RESOURCES_PATH, "EcoCrop_DB.xlsx")
 
@@ -48,25 +48,30 @@ def visualize_missing_values(df, title, filename):
     plt.close()
 
 def clean_and_prepare(df):
-    # Filter invalid temperature extremes
+    # Replace weird placeholders with NaN
+    df.replace(["NA", "na", "None", "none", "n/a", "-", "--"], pd.NA, inplace=True)
+
+    # Filter out unrealistic optimal temperature values
     df = df[df["TOPMN"] <= 40]
 
-    # Fill missing or bad numeric values
+    # KTMP default logic — must be >= 1
     df["KTMP"] = df["KTMP"].fillna(df["TMIN"] - 5)
+    df["KTMP"] = df["KTMP"].apply(lambda x: max(x, 1) if pd.notna(x) else x)
+
+    # Default missing GMIN/GMAX to 0 if empty or NA
     df["GMAX"] = df["GMAX"].replace("", 0).fillna(0)
     df["GMIN"] = df["GMIN"].replace("", 0).fillna(0)
 
-    # Latitude sanitization
+    # Sanitize latitude: replace out-of-range values with NA
     for col in LATITUDE_COLUMNS:
         df.loc[(df[col] < -90) | (df[col] > 90), col] = pd.NA
 
-    # Drop rows with missing required numeric values
-    df = df.dropna(subset=[col for col in NUMERIC_FIELDS if col in df.columns])
-
-    # Normalize weird placeholder strings
-    df.replace(["NA", "na", "None", "none", "n/a", "-", "--"], pd.NA, inplace=True)
+    # Required fields — drop only if missing
+    core_required = ["TOPMN", "TOPMX", "TMIN", "TMAX", "ROPMN", "ROPMX", "RMIN", "RMAX", "KTMP"]
+    df = df.dropna(subset=[col for col in core_required if col in df.columns])
 
     return df
+
 
 def parse_and_normalize(df):
     for col in LIST_COLUMNS:
@@ -220,10 +225,15 @@ def transform_ecocrop_data():
 
     visualize_missing_values(df, "Missing After", os.path.join(REPORT_PATH, "missing_after.png"))
 
+    df = add_additional_features(df)
+    export_rag_chunks(df)
+
+
     df.to_excel(os.path.join(RESOURCES_PATH, "Cleaned_EcoCrop_DB_Final.xlsx"), index=False)
     df.to_csv(os.path.join(RESOURCES_PATH, "cleaned_ecocrop.csv"), index=False)
     df.to_json(os.path.join(RESOURCES_PATH, "cleaned_ecocrop.json"), orient="records", indent=2)
-
+    print("Rows before clean:", len(pd.read_excel(INPUT_FILE)))
+    print("Rows after clean:", len(df))
     print("✅ Exported cleaned data to .xlsx, .csv, and .json")
 
 
@@ -295,7 +305,7 @@ def generate_rag_document(row):
 
     return "\n".join(lines)
 
-def export_rag_chunks(df, output_dir="resources/rag_chunks"):
+def export_rag_chunks(df, output_dir=os.path.join(RESOURCES_PATH,"rag_chunks")):
     Path(output_dir).mkdir(exist_ok=True)
     for _, row in df.iterrows():
         doc = generate_rag_document(row)
