@@ -1,4 +1,3 @@
-import logging
 from contextlib import asynccontextmanager
 
 import pandas as pd
@@ -6,7 +5,7 @@ from fastapi import FastAPI
 
 from .data_transformer import transform_ecocrop_data
 from .database import async_session_maker, engine
-from .logging import logger
+from .logger import logger
 from .models import Plant, Base
 from .plant_router import get_plant_router
 
