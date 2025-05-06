@@ -11,6 +11,7 @@ requests>=2.32.3
 python-dotenv
 dbt-core
 dbt-postgres
-
-
-
+sentence-transformers
+pymilvus
+dbt-duckdb
+duckdb

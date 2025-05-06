@@ -1,0 +1,255 @@
+version: 2
+
+models:
+  - name: ecocrop_enriched
+    description: >
+      Enriched EcoCrop dataset with derived features for plant adaptability. This model
+      includes boolean indicators and composite scores for climate, soil, and water
+      adaptability. It supports downstream RAG workflows, feature stores, and filtering.
+
+    columns:
+      - name: ScientificName
+        description: The scientific (Latin) name of the plant species.
+        tests:
+          - unique
+          - not_null
+
+      - name: AUTH
+        description: The author who described the species scientifically.
+
+      - name: FAMNAME
+        description: The botanical family.
+
+      - name: SYNO
+        description: Synonyms or alternative names.
+
+      - name: COMNAME
+        description: Common names in various languages.
+
+      - name: LIFO
+        description: Life form (herb, shrub, tree, etc.).
+
+      - name: HABI
+        description: Habitat where the plant is found.
+
+      - name: LISPA
+        description: Life span (annual, biennial, perennial, etc.).
+
+      - name: PHYS
+        description: Physical structure (single stem, multi-stem).
+
+      - name: CAT
+        description: Category or use (vegetables, fruits, etc.).
+
+      - name: PLAT
+        description: Plant attributes (deciduous, evergreen, etc.).
+
+      - name: TOPMN
+        description: Optimal minimum temperature (°C).
+
+      - name: TOPMX
+        description: Optimal maximum temperature (°C).
+
+      - name: TMIN
+        description: Absolute minimum temperature (°C).
+
+      - name: TMAX
+        description: Absolute maximum temperature (°C).
+
+      - name: ROPMN
+        description: Optimal minimum rainfall (mm/year).
+
+      - name: ROPMX
+        description: Optimal maximum rainfall (mm/year).
+
+      - name: RMIN
+        description: Absolute minimum rainfall (mm/year).
+
+      - name: RMAX
+        description: Absolute maximum rainfall (mm/year).
+
+      - name: PHOPMN
+        description: Optimal minimum soil pH.
+
+      - name: PHOPMX
+        description: Optimal maximum soil pH.
+
+      - name: PHMIN
+        description: Absolute minimum soil pH level.
+
+      - name: PHMAX
+        description: Absolute maximum soil pH level.
+
+      - name: LATOPMN
+        description: Optimal minimum latitude where the plant can grow.
+
+      - name: LATOPMX
+        description: Optimal maximum latitude where the plant can grow.
+
+      - name: LATMN
+        description: Absolute minimum latitude where the plant can survive.
+
+      - name: LATMX
+        description: Absolute maximum latitude where the plant can survive.
+
+      - name: ALTMX
+        description: Maximum altitude (in meters above sea level) where the plant can grow.
+
+      - name: LIOPMN
+        description: Optimal minimum light intensity required for growth.
+
+      - name: LIOPMX
+        description: Optimal maximum light intensity suitable for growth.
+
+      - name: LIMN
+        description: Absolute minimum light intensity the plant can tolerate.
+
+      - name: LIMX
+        description: Absolute maximum light intensity the plant can tolerate.
+
+      - name: DEP
+        description: Optimal soil depth (in cm) required for the plant’s root system.
+
+      - name: DEPR
+        description: Range of soil depth suitable for the plant.
+
+      - name: TEXT
+        description: Soil texture preference (heavy, medium, light, or organic).
+
+      - name: TEXTR
+        description: Range of soil textures the plant can tolerate.
+
+      - name: FER
+        description: Fertility requirement for the plant to grow optimally.
+
+      - name: FERR
+        description: Fertility range that the plant can tolerate.
+
+      - name: TOX
+        description: Toxicity levels that the plant can tolerate.
+
+      - name: TOXR
+        description: Range of toxicity levels tolerable by the plant.
+
+      - name: SAL
+        description: Salinity levels suitable for the plant’s growth.
+
+      - name: SALR
+        description: Range of salinity levels the plant can tolerate.
+
+      - name: DRA
+        description: Drainage preference for the soil where the plant grows.
+
+      - name: DRAR
+        description: Range of drainage conditions tolerable by the plant.
+
+      - name: KTMPR
+        description: Range of killing temperature for the plant.
+
+      - name: KTMP
+        description: Absolute killing temperature where the plant dies.
+
+      - name: PHOTO
+        description: Photoperiod requirement (short day, neutral day, long day).
+
+      - name: CLIZ
+        description: Climatic zone where the plant grows optimally.
+
+      - name: ABITOL
+        description: Additional biotic tolerance levels (e.g., pest resistance).
+
+      - name: ABISUS
+        description: Additional biotic susceptibility (specific pests or diseases).
+
+      - name: INTRI
+        description: Intraspecific relationships (e.g., self-compatible, dioecious).
+
+      - name: PROSY
+        description: Propagation system or method (how the plant is propagated).
+
+      - name: GMIN
+        description: Minimum growing cycle length (in days).
+
+      - name: GMAX
+        description: Maximum growing cycle length (in days).
+
+      - name: IS_DROUGHT_TOLERANT
+        description: Indicates if the plant is tolerant to drought based on ABITOL_LIST.
+
+      - name: IS_DROUGHT_SUSCEPTIBLE
+        description: Indicates if the plant is susceptible to drought based on ABISUS_LIST.
+
+      - name: IS_FIRE_TOLERANT
+        description: Indicates if the plant is fire tolerant.
+
+      - name: IS_FIRE_SUSCEPTIBLE
+        description: Indicates if the plant is fire susceptible.
+
+      - name: IS_SALINE_TOLERANT
+        description: Indicates if the plant can tolerate high salinity levels.
+
+      - name: IS_SALINE_INTOLERANT
+        description: Indicates if the plant is intolerant to salinity (low SALR values).
+
+      - name: IS_MULTIPLE_PHOTO_PERIODS
+        description: Indicates if the plant supports multiple photoperiod regimes.
+
+      - name: SOIL_TEXTURE_FLEXIBILITY_SCORE
+        description: Count of distinct soil textures supported by the plant.
+
+      - name: IS_SOIL_TEXTURE_TOLERANT
+        description: Indicates if the plant tolerates a wide range of soil textures.
+
+      - name: IS_HIGH_TEMPERATURE_TOLERANT
+        description: Indicates if the plant tolerates high temperatures (TMAX >= 40C).
+
+      - name: IS_LOW_TEMPERATURE_TOLERANT
+        description: Indicates if the plant tolerates cold (TMIN <= 10C).
+
+      - name: IS_FAST_CYCLE
+        description: Indicates if the plant has a short growing cycle (<= 90 days).
+
+      - name: PRECIP_RANGE_WIDTH
+        description: Width of precipitation tolerance range (RMAX - RMIN).
+
+      - name: IS_WIDE_PRECIP_TOLERANCE
+        description: Indicates wide precipitation tolerance (> 1500 mm).
+
+      - name: PH_RANGE_WIDTH
+        description: Width of pH tolerance range (PHMAX - PHMIN).
+
+      - name: IS_PH_FLEXIBLE
+        description: Indicates wide pH tolerance (range >= 2).
+
+      - name: TEMP_RANGE_WIDTH
+        description: Width of temperature tolerance range (TMAX - TMIN).
+
+      - name: IS_TEMP_FLEXIBLE
+        description: Indicates wide temperature tolerance (range >= 20).
+
+      - name: CLIZ_ZONE_COUNT
+        description: Count of climate zones where the plant can grow.
+
+      - name: HAS_MULTIPLE_COMMON_NAMES
+        description: Indicates if the plant has many common names (> 3).
+
+      - name: IS_SHALLOW_ROOTED
+        description: Indicates if the plant is suitable for shallow soils.
+
+      - name: IS_SHORT_DAY
+        description: Indicates if the plant is a short-day photoperiod responder.
+
+      - name: CLIMATE_ADAPT_SCORE
+        description: Composite score based on temperature range, heat tolerance, and climate zone diversity.
+
+      - name: SOIL_ADAPT_SCORE
+        description: Composite score from soil texture tolerance and pH flexibility.
+
+      - name: WATER_ADAPT_SCORE
+        description: Composite score based on drought tolerance and precipitation range.
+
+      - name: ADAPTABILITY_SCORE
+        description: Final weighted score across climate, soil, and water adaptability (0 to 1).
+
+      - name: ADAPTABILITY_LABEL
+        description: Label derived from adaptability score (Very Low, Low, Moderate, High).
