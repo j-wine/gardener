@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import json
-from field_parser import (
+from .field_parser import (
     parse_list_column,
     parse_categorical_with_notes,
     get_full_category_description,
@@ -30,7 +30,7 @@ CATEGORICAL_WITH_NOTES = [
     "PHOTO", "TEXT", "DRA", "SALR", "FER", "TOX", "DEPR"
 ]
 
-RESOURCES_PATH = "../resources"
+RESOURCES_PATH = "resources"
 REPORT_PATH = os.path.join(RESOURCES_PATH, "data-report")
 INPUT_FILE = os.path.join(RESOURCES_PATH, "EcoCrop_DB.xlsx")
 
