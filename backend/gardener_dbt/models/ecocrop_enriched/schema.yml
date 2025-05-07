@@ -253,3 +253,11 @@ models:
 
       - name: ADAPTABILITY_LABEL
         description: Label derived from adaptability score (Very Low, Low, Moderate, High).
+
+      # RAG representation
+
+      - name: vector
+        description: Dense embedding vector generated from the enriched RAG document.
+
+      - name: rag_chunk_text
+        description: Natural language description of the plant, used as RAG chunk input.

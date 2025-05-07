@@ -3,11 +3,12 @@ from contextlib import asynccontextmanager
 import pandas as pd
 from fastapi import FastAPI
 
-from .data_transformer import transform_ecocrop_data
+from .ecocrop_transformer import transform_ecocrop_data
 from .database import async_session_maker, engine
 from .logger import logger
 from .models import Plant, Base
 from .plant_router import get_plant_router
+from .rag_router import get_rag_router
 
 
 @asynccontextmanager
@@ -17,9 +18,9 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         logger.info("Database schema created successfully.")
 
-    logger.info("Creating cleaned dataset")
-    transform_ecocrop_data()
-    logger.info("Finished creating cleaned dataset")
+    # logger.info("Creating cleaned dataset")
+    # transform_ecocrop_data()
+    # logger.info("Finished creating cleaned dataset")
 
     logger.info("Loading Plants into DB")
     await load_data()
@@ -35,6 +36,11 @@ app.include_router(
     get_plant_router(),
     prefix="/plants",
     tags=["plants"]
+)
+app.include_router(
+    get_rag_router(),
+    prefix="/rag",
+    tags=["rag"]
 )
 
 

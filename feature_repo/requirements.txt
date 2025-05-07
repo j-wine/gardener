@@ -1,0 +1,2 @@
+feast[postgres,milvus]==0.49.0
+pandas
