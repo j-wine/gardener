@@ -1,5 +1,34 @@
-version: '3'
 services:
+  feature_server:
+    container_name: feature_server
+    build:
+      context: ./feature_repo
+    volumes:
+      - ./feature_repo/offline_data:/app/offline_data
+      - ./feature_repo/data:/app/data
+    depends_on:
+      postgres:
+        condition: service_started
+      milvus:
+        condition: service_started
+    ports:
+      - "6566:6566"
+    healthcheck:
+      test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
+      interval: "5s"
+      retries: 5
+    restart: unless-stopped
+
+  milvus:
+    image: milvusdb/milvus:v2.3.9
+    container_name: milvus
+    command: ["milvus", "run", "standalone"]
+    ports:
+      - "19530:19530"   # gRPC
+      - "9091:9091"     # HTTP
+    volumes:
+        - milvus-data:/var/lib/milvus
+
   postgres:
     image: postgres:latest
     environment:
@@ -8,42 +37,52 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "${POSTGRES_PORT}:5432"
-    networks:
-      - app-network
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   backend:
     image: jacob-backend
+    container_name: backend
     build: ./backend
     depends_on:
       - postgres
     ports:
       - "8000:8000"
-    networks:
-      - app-network
+    volumes:
+      - ./feature_repo:/app/feature_repo
     environment:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_PORT: ${DB_PORT}
       DB_HOST: ${DB_HOST}
       DB_DATABASE: ${DB_DATABASE}
+      FEAST_REPO_PATH: /app/feature_repo
+
 
   frontend:
     image: jacob-frontend
+    container_name: frontend
     build: ./frontend
     depends_on:
       - backend
     ports:
       - "8501:8501"
-    networks:
-      - app-network
     environment:
       BACKEND_URL: ${BACKEND_URL}
 
-networks:
-  app-network:
-    driver: bridge
+  registry:
+    container_name: registry
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRES_DB=feast
+    ports:
+      - "55001:5432"
+    volumes:
+      - ./feast-postgres-registry:/var/lib/postgresql/data
+    restart: unless-stopped
 
 volumes:
   pgdata:
+  milvus-data:

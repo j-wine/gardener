@@ -1,0 +1,15 @@
+project: ecocrop
+provider: local
+registry:
+  registry_type: sql
+#  path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
+  path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
+online_store:
+  type: milvus
+  path: data/online_store.db
+  embedding_dim: 1024 # bge-m3 response:   /Vector length: 1024
+  index_type: "FLAT"
+  metric_type: "COSINE"
+offline_store:
+  type: file
+entity_key_serialization_version: 3

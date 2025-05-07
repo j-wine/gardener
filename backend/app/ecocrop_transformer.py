@@ -1,9 +1,10 @@
-from pathlib import Path
 import os
-import pandas as pd
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
-import json
+
 from .field_parser import (
     parse_list_column,
     parse_categorical_with_notes,
@@ -237,13 +238,40 @@ def transform_ecocrop_data():
     print("✅ Exported cleaned data to .xlsx, .csv, and .json")
 
 
+
+
+
+DISPLAY_NAMES = {
+    "COMNAME": "Common names",
+    "CAT": "Use categories",
+    "CLIZ": "Climate zones",
+    "SYNO": "Synonyms",
+    "PLAT": "Plant attributes",
+    "LISPA": "Lifespan",
+    "TEXTR": "Soil texture range",
+    "FERR": "Fertility range",
+    "TOXR": "Toxicity range",
+    "DRAR": "Drainage range",
+    "HABI": "Habitat",
+    "LIFO": "Life form",
+    "PHYS": "Physical structure",
+    "PROSY": "Propagation system",
+    "INTRI": "Intraspecific traits",
+    "ABITOL": "Biotic tolerance",
+    "ABISUS": "Biotic susceptibility",
+    "PHOTO": "Photoperiod",
+    "TEXT": "Soil texture",
+    "DRA": "Drainage",
+    "SALR": "Salinity tolerance",
+    "FER": "Fertility",
+    "TOX": "Toxicity",
+    "DEPR": "Soil depth range",
+}
+
 def generate_rag_document(row):
     name = row["ScientificName"]
     adaptability = row["ADAPTABILITY_LABEL"]
     score = row["ADAPTABILITY_SCORE"]
-    common_names = row.get("COMNAME_LIST", [])
-    uses = row.get("CAT_LIST", [])
-    climate_zones = row.get("CLIZ_DESC", "")
     growth_days = row.get("GROWTH_CYCLE_DAYS")
     photo_desc = row.get("PHOTO_DESC", "")
     ph_range = row.get("PH_RANGE_WIDTH")
@@ -252,24 +280,34 @@ def generate_rag_document(row):
 
     lines = [f"**{name}** — Adaptability: **{adaptability}** (score: {score})"]
 
-    if common_names:
-        lines.append(f"Common names: {', '.join(common_names[:5])}")
-        if row.get("HAS_MULTIPLE_COMMON_NAMES", False):
-            lines.append("📚 This plant is known by many names across cultures.")
+    # 🌿 General Lists — from LIST_COLUMNS
+    for field in LIST_COLUMNS:
+        values = row.get(f"{field}_LIST", [])
+        if isinstance(values, list) and values:
+            label = DISPLAY_NAMES.get(field.upper(), field.replace("_", " ").capitalize())
+            lines.append(f"{label}: {', '.join(values)}")
 
-    if uses:
-        lines.append(f"Use categories: {', '.join(uses)}")
+    # 📝 Descriptive Lists — from *_DESC
+    for field in CATEGORICAL_WITH_NOTES:
+        values = row.get(f"{field}_DESC", [])
+        if isinstance(values, list) and values:
+            label = DISPLAY_NAMES.get(field.upper(), field.replace("_", " ").capitalize())
+            lines.append(f"{label}: {', '.join(values)}")
 
-    lines.append(f"🌍 Climate zones: {climate_zones or 'N/A'}")
-    if row.get("CLIZ_ZONE_COUNT", 0) <= 2:
-        lines.append("⚠️ Warning: Grows in very few zones — may need ideal conditions.")
+    # 🌍 Climate zones
+    cliz_desc = row.get("CLIZ_DESC", "")
+    if cliz_desc.strip():
+        lines.append(f"🌍 Climate zones: {cliz_desc}")
+        if row.get("CLIZ_ZONE_COUNT", 0) <= 2:
+            lines.append("⚠️ Warning: Grows in very few zones — may need ideal conditions.")
 
-    # Subscores
+    # 📊 Subscores
     lines.append(
-        f"📊 Subscores — Climate: {row['CLIMATE_ADAPT_SCORE']:.2f}, Soil: {row['SOIL_ADAPT_SCORE']:.2f}, Water: {row['WATER_ADAPT_SCORE']:.2f}"
+        f"📊 Subscores — Climate: {row['CLIMATE_ADAPT_SCORE']:.2f}, "
+        f"Soil: {row['SOIL_ADAPT_SCORE']:.2f}, Water: {row['WATER_ADAPT_SCORE']:.2f}"
     )
 
-    # Hard environmental data
+    # 🌡 Environmental data
     lines.extend([
         f"🌡️ Temperature: Optimal {row['TOPMN']}–{row['TOPMX']}°C | Absolute: {row['TMIN']}–{row['TMAX']}°C",
         f"💧 Precipitation: Optimal {row['ROPMN']}–{row['ROPMX']} mm | Absolute: {row['RMIN']}–{row['RMAX']} mm",
@@ -277,7 +315,7 @@ def generate_rag_document(row):
         f"📈 Ranges — Temp: {temp_range}°C | pH: {ph_range} | Precip: {precip_range} mm"
     ])
 
-    # Traits
+    # 🔎 Traits
     traits = []
     if row["IS_DROUGHT_TOLERANT"]: traits.append("drought-tolerant")
     if row["IS_DROUGHT_SUSCEPTIBLE"]: traits.append("drought-susceptible")
@@ -300,7 +338,7 @@ def generate_rag_document(row):
     if isinstance(growth_days, (int, float)):
         lines.append(f"🕒 Growth cycle: {int(growth_days)} days")
 
-    if photo_desc:
+    if photo_desc.strip():
         lines.append(f"🌞 Photoperiod: {photo_desc}")
 
     return "\n".join(lines)
