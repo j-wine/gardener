@@ -1,5 +1,137 @@
 # Gardener App Documentation
 
+## [Work in Progress] Retrieval-Augmented Generation (RAG)
+
+### Ziel des RAG-Moduls
+
+Das RAG-Modul erweitert die Gardener App um die Fähigkeit, **kontextbasierte Antworten** auf Nutzereingaben zu generieren. Hierbei werden strukturierte Informationen aus der EcoCrop-Datenbank mit modernen Sprachmodellen kombiniert.
+
+**Use Cases:**
+
+* Fragen zur Klima-, Boden- oder Salztoleranz einer Pflanze
+* Empfehlung von Pflanzen basierend auf Umweltbedingungen
+* Kontextuelles Erklären von Eignungen und Wachstumsbedingungen
+
+---
+
+### Architekturüberblick
+
+#### 1. **Preprocessing Pipeline**
+
+* Bereinigt und normalisiert die Rohdaten aus `EcoCrop_DB.xlsx` bzw. dem dbt-Modell
+* Extrahiert Listenfelder (`COMNAME`, `CAT`, `CLIZ`, …)
+* Berechnet Zusatzmerkmale wie `IS_DROUGHT_TOLERANT`, `PH_RANGE_WIDTH`, `ADAPTABILITY_SCORE`
+
+#### 2. **Chunking & Embedding**
+
+* Jede Pflanze wird als RAG-kompatibler Dokumenten-Chunk (`.txt`) exportiert
+* Einbettung erfolgt über  **bge-m3**
+* Speicherung der Vektoren und zugehöriger Metadaten in **Milvus**
+
+#### 3. **RAG Query Pipeline**
+
+* Eingabe der Nutzerfrage → Transformation in einen Vektor
+* Hybrid-Suche in Milvus (semantische Ähnlichkeit + Filter)
+* Top-Dokumente werden als Kontext an ein LLM übergeben
+* Antwort wird generiert und zurückgegeben
+
+---
+
+### Komponenten
+
+| Datei / Modul              | Funktion                                       |
+| -------------------------- | ---------------------------------------------- |
+| `field_parser.py`          | Parser für Listen- und Kategoriefelder         |
+| `transform_ecocrop_data()` | Bereinigt & transformiert Pflanzendaten        |
+| `generate_rag_document()`  | Erstellt ein RAG-Chunk aus einer Pflanzenzeile |
+| `export_rag_chunks()`      | Exportiert `.txt`-Dateien je Pflanze           |
+| `rag_router.py`            | FastAPI-Endpunkt für RAG-Queries               |
+| `vector_store/`            | Indexierung der Embeddings in Milvus           |
+
+---
+
+### Beispiel für einen RAG Chunk
+
+```text
+**South Queensland kauri** — Adaptability: **Moderate** (score: 0.65)
+Common names: South Queensland kauri
+Use categories: forest/wood
+ Climate zones: tropical, humid
+ Subscores — Climate: 0.80, Soil: 0.50, Water: 0.65
+ Temperature: Optimal 20–30°C | Absolute: 10–40°C
+ Precipitation: Optimal 1000–2000 mm | Absolute: 800–2500 mm
+ Traits: drought-tolerant, fire-susceptible, temperature-flexible
+ Growth cycle: 180 days
+```
+
+---
+
+### Beispiel-Query
+
+**Frage:**
+
+> „Welche Pflanzen eignen sich für sandige Böden mit wenig Wasser?“
+
+**Ablauf:**
+
+1. Nutzerfrage → Vektor
+2. Suche in Milvus mit Metadatenfiltern:
+
+   ```python
+   filter="IS_DROUGHT_TOLERANT == true AND TEXT_LIST like '%sandy%'"
+   ```
+3. Top-Chunks + Frage an LLM → Antwort
+
+**Beispiel-Antwort (LLM):**
+
+> "Für sandige, wasserarme Böden eignen sich besonders *Agave americana*, *Atriplex halimus* und *Opuntia ficus-indica*. Diese Arten sind trockenheitsresistent und gedeihen gut in leichten, durchlässigen Böden."
+
+---
+
+## Nächste Schritte (To-Do)
+
+### **1. SQL Layer (Strukturierte Filterung via dbt)**
+
+* [ ] Existierendes dbt-Schema aktiv für RAG-Preprocessing verwenden
+* [ ] Modell `plants_rag_ready` erstellen (vollständige, bereinigte Pflanzen)
+* [ ] dbt-Views für UI-relevante Filterlogik (z. B. kurze Zyklen, PH-Toleranz)
+* [ ] `schema.yml` mit Tests ergänzen (`not_null`, `accepted_values`)
+* [ ] `read_sql()` im RAG-Export statt Excel-Datei nutzen
+
+### **2. Metadata Filtering (Milvus Hybrid Queries)**
+
+* [ ] Speichere Metadaten wie `CLIZ_LIST`, `TEXT_LIST`, `ADAPTABILITY_LABEL`, `IS_DROUGHT_TOLERANT` direkt in Milvus
+* [ ] Füge Filter-Syntax in Vektor-Suchlogik ein
+
+### **3. Vector Embedding Layer**
+
+* [ ] Vollständiger Informationsgehalt in RAG Chunks
+* [ ] Format von RAG Chunks überarbeiten
+
+
+### **4. Optional: BM25 / Keyword Layer**
+
+* [ ] Fallback-Suche mit ElasticSearch / Whoosh
+* [ ] Speziell für exakte Begriffe oder juristisch/technisch relevante Anfragen
+
+### **5. Knowledge Graph (optional, mittelfristig)**
+
+* [ ] Modellierung von Relationen (Verwandtschaft, Alternativen, Regionen)
+* [ ] Integration als reasoning layer bei komplexen Abfragen
+
+### **6. LLM Prompt Layer**
+
+* [ ] Templates für Frage-Typen: Vergleich, Empfehlung, Erklärung
+* [ ] Kombination aus Top-N Kontext + expliziten Filtern
+* [ ] Deutsch & Englisch im Prompt unterstützen
+
+### **7. UI & Monitoring**
+
+* [ ] Interaktive Filter für: pH-Wert, Temperaturspanne, Zykluslänge, Klimazone
+* [ ] Logging und Metriken für RAG (z. B. Trefferqualität, Precision\@k)
+* [ ] Segmentiertes Monitoring (z. B. Performance pro Pflanzentyp)
+
+
 ## Inhaltsverzeichnis
 1. [Motivation und Zweck der Gardener App](#1-motivation-und-zweck-der-gardener-app)
 2. [Gesamtarchitektur](#2-gesamtarchitektur)
@@ -28,6 +160,7 @@
    3. [Kubernetes-Ressourcen](#63-kubernetes-ressourcen)
    4. [Anpassungen der Deployment Pipeline](#64-anpassungen-der-deployment-pipeline)
 7. [Quellen](#7-quellen)
+
 
 ## 1. Motivation und Zweck der Gardener App
 Die Motivation der Gardener App liegt zum einen im Eigeninteresse verschiedene Gartenpflanzen anzubauen, zum Anderen in der Inspiration durch den Einsatz von AI basierten Tools in der Landwirtschaft. Es gibt beispielsweise von Microsoft eine Lösung die indischen Farmern Tipps für u.a. Aussähzeitpunkt, Wahl des Cultivars, Düngung bietet.
